@@ -1,4 +1,6 @@
 import React from 'react';
+import { MotionPage } from '../components/MotionPage';
+import { StatCard } from '../components/StatCard';
 
 // Extend the global Window interface to include the Android JavascriptInterface
 declare global {
@@ -40,36 +42,35 @@ const ProfilePage = () => {
   }
 
   return (
-    <div>
-      <h1 className="headline">Profile</h1>
+    <MotionPage>
+        <div>
+        <h1 className="headline">Profile</h1>
 
-      {/* User Information Card (Static for MVP) */}
-      <div className="card">
-        <div className="section-label">User Info</div>
-        <h3>Guest User</h3>
-        <p>Goals: Strength, Mobility</p>
-      </div>
+        {/* User Information Card (Static for MVP) */}
+        <StatCard title="User Info">
+            <h3>Guest User</h3>
+            <p>Goals: Strength, Mobility</p>
+        </StatCard>
 
-      {/* Preferences Card */}
-      <div className="card">
-        <div className="section-label">Preferences</div>
-        <div className="flex-row" style={{padding: '8px 0'}}>
-            <span>Dark Mode</span>
-            <input type="checkbox" />
+        {/* Preferences Card */}
+        <StatCard title="Preferences">
+            <div className="flex-row" style={{padding: '8px 0'}}>
+                <span>Dark Mode</span>
+                <input type="checkbox" />
+            </div>
+            <div className="flex-row" style={{padding: '8px 0'}}>
+                <span>Units (lb/kg)</span>
+                <select><option>lb</option><option>kg</option></select>
+            </div>
+        </StatCard>
+
+        {/* Debugging / Bridge Test Card */}
+        <StatCard title="Device Bridge Tests">
+            <button className="btn btn-secondary mb-2" onClick={handleToastTest}>Test Native Toast</button>
+            <button className="btn btn-secondary" onClick={handlePerms}>Request Native Permission</button>
+        </StatCard>
         </div>
-        <div className="flex-row" style={{padding: '8px 0'}}>
-            <span>Units (lb/kg)</span>
-            <select><option>lb</option><option>kg</option></select>
-        </div>
-      </div>
-
-      {/* Debugging / Bridge Test Card */}
-      <div className="card">
-          <div className="section-label">Device Bridge Tests</div>
-          <button className="btn btn-secondary mb-2" onClick={handleToastTest}>Test Native Toast</button>
-          <button className="btn btn-secondary" onClick={handlePerms}>Request Native Permission</button>
-      </div>
-    </div>
+    </MotionPage>
   );
 };
 
