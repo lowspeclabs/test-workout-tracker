@@ -1,0 +1,8 @@
+
+{
+  "name": "PaperFit",
+  "description": "A minimalist, newspaper-styled fitness tracker designed for focused, editorial-grade workout experiences with local-first data privacy.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
