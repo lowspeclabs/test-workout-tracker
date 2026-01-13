@@ -2,38 +2,54 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchStats, fetchWorkouts } from '../api';
 
+/**
+ * HomePage Component
+ * Displays the daily dashboard, including streaks, summary stats, and a recommended workout.
+ */
 const HomePage = () => {
   const navigate = useNavigate();
+
+  // State for user statistics (sessions count, recent activity)
   const [stats, setStats] = useState<any>(null);
+
+  // State for the recommended workout to display
   const [recommendedWorkout, setRecommendedWorkout] = useState<any>(null);
 
+  // Load data on component mount
   useEffect(() => {
     fetchStats().then(setStats);
-    // For MVP, just grab the first workout as recommended
+
+    // Fetch workouts to find a recommendation.
+    // MVP Strategy: Defaults to the first available workout.
     fetchWorkouts().then(workouts => {
         if (workouts.length > 0) setRecommendedWorkout(workouts[0]);
     });
   }, []);
 
+  // Navigate to the session player with the recommended workout
   const handleStartWorkout = () => {
     if (recommendedWorkout) {
       navigate(`/session/${recommendedWorkout.id}`);
     }
   };
 
-  const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  // Format today's date for the newspaper header (e.g., "Monday, January 1")
+  const todayDateString = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 
   return (
     <div>
+      {/* Header Section */}
       <header className="mb-4">
-        <div className="section-label">{today}</div>
+        <div className="section-label">{todayDateString}</div>
         <h1 className="headline">PaperFit Daily</h1>
       </header>
 
+      {/* Stats Summary Section */}
       <section>
         <div className="flex-row mb-4">
             <div className="card" style={{flex: 1, marginRight: '8px'}}>
                 <div className="section-label">Streak</div>
+                {/* Streak is currently hardcoded for MVP */}
                 <div style={{fontSize: '2rem', fontWeight: 'bold'}}>3 Days</div>
             </div>
             <div className="card" style={{flex: 1, marginLeft: '8px'}}>
@@ -43,6 +59,7 @@ const HomePage = () => {
         </div>
       </section>
 
+      {/* Recommended Workout Card */}
       <section className="mb-4">
         <div className="section-label">Recommended Workout</div>
         {recommendedWorkout ? (
@@ -63,6 +80,7 @@ const HomePage = () => {
         )}
       </section>
 
+      {/* Recent Activity Feed */}
       <section>
         <div className="section-label">Recent Activity</div>
         {stats?.recent_activity && stats.recent_activity.length > 0 ? (

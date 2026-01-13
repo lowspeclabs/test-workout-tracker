@@ -1,24 +1,42 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { fetchWorkoutDetails, startSession, logSet, completeSession } from '../api';
-import { X, Clock, CheckCircle } from 'lucide-react';
+import { X, CheckCircle } from 'lucide-react';
 
+/**
+ * SessionPlayer Component
+ *
+ * This is the core workout interface. It guides the user through the workout one exercise at a time.
+ * Features:
+ * - Loads workout details and starts a tracking session.
+ * - Displays exercise cues, targets, and rest times.
+ * - Allows logging of weight and reps for each set.
+ * - Enforces rest timers between sets.
+ * - Handles transitions between exercises and workout completion.
+ */
 const SessionPlayer = () => {
   const { workoutId } = useParams();
   const navigate = useNavigate();
-  const [workout, setWorkout] = useState<any>(null);
-  const [currentStepIndex, setCurrentStepIndex] = useState(0);
-  const [sessionId, setSessionId] = useState<number | null>(null);
-  const [setsLogged, setSetsLogged] = useState<number[]>([]);
 
-  // Inputs
+  // State: Workout Data
+  const [workout, setWorkout] = useState<any>(null);
+  const [currentStepIndex, setCurrentStepIndex] = useState(0); // Which exercise are we on?
+  const [sessionId, setSessionId] = useState<number | null>(null); // Database ID for this session
+
+  // State: Session Progress
+  // Tracks the sets completed for the *current* exercise only.
+  // When exercise changes, this resets.
+  const [setsLogged, setSetsLogged] = useState<any[]>([]);
+
+  // State: Input Fields
   const [weight, setWeight] = useState('');
   const [reps, setReps] = useState('');
 
-  // Rest
+  // State: Rest Timer
   const [isResting, setIsResting] = useState(false);
   const [restTimeLeft, setRestTimeLeft] = useState(0);
 
+  // Initial Load: Fetch workout and start session
   useEffect(() => {
     if (workoutId) {
       fetchWorkoutDetails(parseInt(workoutId)).then(setWorkout);
@@ -26,6 +44,7 @@ const SessionPlayer = () => {
     }
   }, [workoutId]);
 
+  // Timer Logic: Countdown for rest periods
   useEffect(() => {
     let interval: any;
     if (isResting && restTimeLeft > 0) {
@@ -33,7 +52,7 @@ const SessionPlayer = () => {
             setRestTimeLeft(prev => prev - 1);
         }, 1000);
     } else if (restTimeLeft === 0 && isResting) {
-        setIsResting(false);
+        setIsResting(false); // Timer finished
     }
     return () => clearInterval(interval);
   }, [isResting, restTimeLeft]);
@@ -43,41 +62,47 @@ const SessionPlayer = () => {
   const currentStep = workout.exercises[currentStepIndex];
   const currentSetNumber = setsLogged.length + 1;
   const isLastExercise = currentStepIndex === workout.exercises.length - 1;
-  const isLastSet = setsLogged.length >= currentStep.sets;
 
+  // Handler: Log a completed set
   const handleLogSet = async () => {
       if (!sessionId) return;
 
+      // Save to backend
       await logSet(sessionId, {
           exercise_id: currentStep.exercise_id,
           set_index: currentSetNumber,
           reps: parseInt(reps),
           weight: parseFloat(weight),
-          rpe: 0
+          rpe: 0 // Default RPE for MVP
       });
 
+      // Update local state
       setSetsLogged([...setsLogged, { reps, weight }]);
 
-      // If incomplete sets for this exercise, start rest
+      // Logic: Are there more sets for this exercise?
       if (setsLogged.length + 1 < currentStep.sets) {
+          // Yes: Start Rest Timer
           setRestTimeLeft(currentStep.rest_seconds);
           setIsResting(true);
       } else {
-          // Finished exercise
+          // No: Exercise Complete
           if (isLastExercise) {
+              // Workout Complete
               await completeSession(sessionId);
               alert("Workout Complete!");
               navigate('/');
           } else {
+              // Move to Next Exercise
               setCurrentStepIndex(prev => prev + 1);
-              setSetsLogged([]);
+              setSetsLogged([]); // Reset set tracker for new exercise
               setIsResting(false);
-              setWeight(''); // reset or keep previous?
+              setWeight('');
               setReps('');
           }
       }
   };
 
+  // Handler: User wants to skip the rest timer
   const handleSkipRest = () => {
       setRestTimeLeft(0);
       setIsResting(false);
@@ -85,25 +110,30 @@ const SessionPlayer = () => {
 
   return (
     <div style={{height: '100vh', display: 'flex', flexDirection: 'column', background: '#fff'}}>
-      {/* Top Bar */}
+      {/* Top Navigation Bar */}
       <div className="flex-row" style={{padding: '16px', borderBottom: '1px solid #eee'}}>
+          {/* Close Button */}
           <X onClick={() => navigate('/')} style={{cursor: 'pointer'}} />
           <div style={{fontWeight: 'bold'}}>{workout.name}</div>
+          {/* Finish Early Button */}
           <div onClick={() => { completeSession(sessionId!).then(() => navigate('/')) }} style={{cursor: 'pointer', color: 'var(--accent-color)'}}>
               Finish
           </div>
       </div>
 
-      {/* Main Content */}
+      {/* Main Exercise Content */}
       <div style={{flex: 1, padding: '16px', overflowY: 'auto'}}>
+          {/* Progress Indicator */}
           <div className="section-label">Exercise {currentStepIndex + 1} of {workout.exercises.length}</div>
           <h2 style={{fontSize: '2rem', marginBottom: '8px'}}>{currentStep.exercise_name}</h2>
 
+          {/* Cues Card */}
           <div className="card" style={{background: '#f9f9f9'}}>
               <div style={{fontWeight: 'bold'}}>Cues</div>
               <p>{currentStep.cues}</p>
           </div>
 
+          {/* Targets Row */}
           <div className="flex-row mb-4">
               <div style={{textAlign: 'center', flex: 1}}>
                   <div className="section-label">Target</div>
@@ -115,7 +145,7 @@ const SessionPlayer = () => {
               </div>
           </div>
 
-          {/* Logging Area */}
+          {/* Input Area (Logging Card) */}
           <div className="card">
               <div className="flex-row mb-2">
                   <div style={{flex: 1, marginRight: '8px'}}>
@@ -146,7 +176,7 @@ const SessionPlayer = () => {
               </div>
           </div>
 
-          {/* Set History for this session */}
+          {/* History of Sets for Current Exercise */}
           {setsLogged.length > 0 && (
               <div className="mb-4">
                   <div className="section-label">Completed Sets</div>
@@ -161,8 +191,9 @@ const SessionPlayer = () => {
           )}
       </div>
 
-      {/* Bottom Bar / Rest Overlay */}
+      {/* Footer / Rest Overlay */}
       {isResting ? (
+          // Full screen overlay for Rest Mode
           <div style={{
               position: 'absolute', bottom: 0, left: 0, right: 0,
               background: 'rgba(0,0,0,0.9)', color: 'white',
@@ -176,6 +207,7 @@ const SessionPlayer = () => {
               <button className="btn btn-primary" onClick={handleSkipRest} style={{maxWidth: '200px'}}>Skip Rest</button>
           </div>
       ) : (
+        // Standard Action Bar
         <div style={{padding: '16px', borderTop: '1px solid #eee'}}>
             <button className="btn btn-primary" onClick={handleLogSet}>LOG SET</button>
         </div>

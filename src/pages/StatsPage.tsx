@@ -1,9 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { fetchStats } from '../api';
 
+/**
+ * StatsPage Component
+ * Displays user progress statistics including total sessions and recent set history.
+ */
 const StatsPage = () => {
+    // State to hold fetched statistics
     const [stats, setStats] = useState<any>(null);
 
+    // Fetch stats on component mount
     useEffect(() => {
         fetchStats().then(setStats);
     }, []);
@@ -12,6 +18,7 @@ const StatsPage = () => {
         <div>
             <h1 className="headline">Statistics</h1>
 
+            {/* Top Level Metrics */}
             <div className="flex-row mb-4">
                 <div className="card" style={{flex: 1, marginRight: '4px'}}>
                     <div className="section-label">Sessions</div>
@@ -19,10 +26,12 @@ const StatsPage = () => {
                 </div>
                 <div className="card" style={{flex: 1, marginLeft: '4px'}}>
                      <div className="section-label">Weight Lifted</div>
+                     {/* Placeholder for future volume calculation */}
                      <div style={{fontSize: '2rem'}}>--</div>
                 </div>
             </div>
 
+            {/* List of Recent Sets */}
             <div className="card">
                 <div className="section-label">Recent History</div>
                 {stats?.recent_activity?.map((set: any) => (
@@ -32,6 +41,7 @@ const StatsPage = () => {
                 ))}
             </div>
 
+            {/* Placeholder for Graphs/Charts */}
             <div className="card text-center">
                 <p>More charts coming soon...</p>
             </div>
