@@ -1,6 +1,30 @@
 # PaperFit
 
-PaperFit is a minimal "newspaper-styled" workout tracking application. It is designed as a hybrid mobile application where an Android native shell hosts a responsive web application built with React. The backend is powered by Node.js and SQLite.
+PaperFit is a minimal "newspaper-styled" workout tracking application. It follows a **Hybrid Architecture**, combining the flexibility of a React web application with the system integration of a native Android shell.
+
+## Architecture Overview
+
+PaperFit's architecture is composed of three distinct layers:
+
+### 1. The Native Shell (Android)
+The entry point is a native Android application (`android/`) that hosts a single `WebView`.
+-   **WebView Wrapper**: `MainActivity.java` configures a full-screen Chrome WebView to load the React application.
+-   **JavaScript Bridge**: A custom `WebAppInterface` class exposes native functionality (like Toasts and Permission Requests) to the web context via the `window.Android` global object. This allows the web app to feel "native".
+-   **Configuration**: Handles internet permissions and hardware back button navigation within the web history.
+
+### 2. The Frontend (React PWA)
+The user interface (`src/`) is a Single Page Application (SPA) built with React and Vite.
+-   **Routing**: `react-router-dom` manages navigation between the Dashboard (`HomePage`), Workout Plan (`PlanPage`), Analytics (`StatsPage`), and Settings (`ProfilePage`).
+-   **Design System**: A custom "Newspaper" theme (`index.css`) uses CSS variables for typography (Georgia/Serif) and spacing.
+-   **Data Visualization**: `StatsPage` uses **Apache ECharts** (`echarts-for-react`) to render interactive progress charts. Theme tokens are shared between CSS and JS via `useTheme.ts` to ensure charts match the UI.
+-   **Motion & UX**: **Framer Motion** powers page transitions (`MotionPage`) and scroll-triggered reveals (`StatCard`). It respects system "Reduced Motion" settings for accessibility.
+-   **State & Logic**: The `SessionPlayer` manages complex workout state (timers, set logging, exercise progression) locally before syncing to the backend.
+
+### 3. The Backend (Node.js & SQLite)
+A lightweight REST API (`services/api/`) manages data persistence.
+-   **Express Server**: Handles HTTP requests for workouts, sessions, and statistics.
+-   **SQLite Database**: Stores relational data (Users, Exercises, Workouts, Sessions, Sets) in a local file (`paperfit.db`).
+-   **Seeding**: On startup, the server automatically populates the database with default exercises and workout templates if empty.
 
 ## File Structure
 
@@ -8,51 +32,30 @@ PaperFit is a minimal "newspaper-styled" workout tracking application. It is des
 graph TD
     Root[Project Root]
     Root --> Android[android/]
+    Root --> Services[services/]
     Root --> Src[src/]
-    Root --> Server[server.js]
-    Root --> DB[paperfit.db]
+    Root --> Test[test/]
 
     Android --> App[app/src/main]
     App --> Java[java/com/paperfit/MainActivity.java]
-    App --> Res[res/layout/activity_main.xml]
+
+    Services --> API[api/server.js]
 
     Src --> Components[components/]
     Src --> Pages[pages/]
-    Src --> API[api.ts]
-    Src --> AppTSX[App.tsx]
-    Src --> CSS[index.css]
+    Src --> APIClient[api.ts]
 
-    Pages --> Home[HomePage.tsx]
-    Pages --> Plan[PlanPage.tsx]
-    Pages --> Session[SessionPlayer.tsx]
-    Pages --> Stats[StatsPage.tsx]
-    Pages --> Profile[ProfilePage.tsx]
+    Test --> Unit[unit/]
+    Test --> Integration[integration/]
+    Test --> E2E[e2e-web/]
 ```
 
-## File Descriptions
+## Testing Strategy
 
-### Root Directory
-- **`server.js`**: The backend server entry point. It runs an Express application that manages the SQLite database (`paperfit.db`). It handles API requests for fetching workouts, starting sessions, logging sets, and retrieving statistics. It also handles database initialization and seeding.
-- **`paperfit.db`**: The SQLite database file storing user data, exercises, workouts, and logs.
-- **`package.json`**: Manages project dependencies and scripts.
-
-### Source Code (`src/`)
-- **`api.ts`**: Contains helper functions for making HTTP requests to the backend API (`fetchWorkouts`, `logSet`, etc.). It abstracts the `fetch` calls.
-- **`App.tsx`**: The main React component that sets up the routing configuration using `react-router-dom`. It defines which component renders for each URL path.
-- **`index.css`**: Defines the global styles for the application, implementing the "Minimal Newspaper" design system (typography, spacing, borders).
-- **`components/Layout.tsx`**: A wrapper component that renders the persistent bottom navigation bar and the current page content.
-
-### Pages (`src/pages/`)
-- **`HomePage.tsx`**: The dashboard screen. It displays the user's streak, summary stats, and a "Recommended Workout" card to quickly start training.
-- **`PlanPage.tsx`**: Displays the library of available workout templates. Users can browse and select a workout to start.
-- **`SessionPlayer.tsx`**: The core workout interface. It runs as a standalone full-screen page. It guides the user through exercises, tracks sets/reps/weight, manages rest timers, and handles workout completion.
-- **`StatsPage.tsx`**: Displays user progress, including total sessions completed and a history of recent sets.
-- **`ProfilePage.tsx`**: Manages user preferences (like dark mode or units) and provides buttons to test the Android Native Bridge integration.
-
-### Android Native (`android/`)
-- **`MainActivity.java`**: The main Java activity for the Android app. It sets up a `WebView` to load the web application. It also establishes a JavaScript Bridge (`window.Android`) that allows the web app to trigger native functionality like Toasts or Permission requests.
-- **`AndroidManifest.xml`**: Configuration file that declares the app's permissions (Internet) and activities.
-- **`activity_main.xml`**: The XML layout file containing the `WebView` element.
+The project uses a tiered testing approach:
+1.  **Unit Tests (Vitest)**: Fast tests for UI components (`HomePage.test.tsx`) using `jsdom` and React Testing Library. Mocking is used for browser APIs like `IntersectionObserver`.
+2.  **Integration Tests (Vitest + Supertest)**: Tests for the backend API (`api.test.ts`) running against the real SQLite database to verify endpoints.
+3.  **E2E Web Tests (Playwright)**: Browser-based tests (`bridge.spec.js`) that simulate the Android environment by injecting a mock `window.Android` object, verifying the JS Bridge works as expected.
 
 ## Setup and Running
 
@@ -61,17 +64,27 @@ graph TD
     npm install
     ```
 
-2.  **Start the Backend**:
+2.  **Start the Stack**:
+    You can run the API and Frontend separately, or use the test scripts.
     ```bash
-    node server.js
-    ```
-    The API runs on `http://localhost:3001`.
+    # Start Backend
+    npm run start:api
 
-3.  **Start the Frontend**:
-    ```bash
+    # Start Frontend
     npm run dev
     ```
-    The web app runs on `http://localhost:3000` (or similar).
+
+3.  **Run Tests**:
+    ```bash
+    # Unit Tests
+    npm run test:unit
+
+    # Integration Tests
+    npm run test:integration
+
+    # E2E Tests (ensure local dev server is running on port 3000)
+    npm run test:e2e:web
+    ```
 
 4.  **Android Development**:
-    Open the `android` folder in Android Studio to build and run the native wrapper. Ensure the `MainActivity.java` URL points to your local machine's IP (e.g., `http://10.0.2.2:3000` for the emulator).
+    Open the `android` folder in Android Studio. Ensure the `MainActivity.java` URL points to `http://10.0.2.2:3000` (Android emulator localhost alias) to connect to your local dev server.
